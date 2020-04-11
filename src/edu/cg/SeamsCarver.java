@@ -55,7 +55,7 @@ public class SeamsCarver extends ImageProcessor {
 		//TODO: copy the original or destroy???
 		BufferedImage greyWorkingImg = new ImageProcessor(logger, workingImage,rgbWeights,inWidth, workingImage.getHeight()).greyscale();
 		for(int i = 0; i < numOfSeams; i++){
-			
+
 			long[][] energy = calculatePixelsEnergy(inHeight, inWidth - i, greyWorkingImg);
 			long[][] cost = calculateCostMatrix(inHeight, inWidth - i, greyWorkingImg, energy);
 
@@ -63,7 +63,6 @@ public class SeamsCarver extends ImageProcessor {
 			
 			//greyWorkingImg - אחרי המחיקה
 		}
-
 	}
 
 	private Stack backTracking(long[][] cost , long[][] energy, int height , int width, BufferedImage greyImg) {
