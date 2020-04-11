@@ -1,6 +1,11 @@
 package edu.cg;
 
+import edu.cg.menu.MenuWindow;
+
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 public class SeamsCarver extends ImageProcessor {
 
@@ -47,13 +52,118 @@ public class SeamsCarver extends ImageProcessor {
 	}
 
 	private BufferedImage reduceImageWidth() {
-		// TODO: Implement this method, remove the exception.
-		throw new UnimplementedMethodException("reduceImageWidth");
+		//TODO: copy the original or destroy???
+		BufferedImage greyWorkingImg = new ImageProcessor(logger, workingImage,rgbWeights,inWidth, workingImage.getHeight()).greyscale();
+		for(int i = 0; i < numOfSeams; i++){
+			
+			long[][] energy = calculatePixelsEnergy(inHeight, inWidth - i, greyWorkingImg);
+			long[][] cost = calculateCostMatrix(inHeight, inWidth - i, greyWorkingImg, energy);
+
+			Stack seamToRemove = backTracking(cost,energy, inHeight, inWidth-i, greyWorkingImg);
+			
+			//greyWorkingImg - אחרי המחיקה
+		}
+
+	}
+
+	private Stack backTracking(long[][] cost , long[][] energy, int height , int width, BufferedImage greyImg) {
+
+		Stack ans = new Stack();
+
+		long minVal = Integer.MAX_VALUE;
+		int minValPositin = 0;
+
+		//first row minimal value
+		for(int j = 0; j < width; j++){
+			if (minVal > cost[height-1][j]) {
+				minVal = cost[height-1][j];
+				minValPositin = j;
+			}
+		}
+
+		ans.push(minValPositin);
+
+		for(int i = height-1; i > 0; i--){
+			int j = (int) ans.peek();
+			if (cost[i][j] == energy[i][j] + cost[i-1][j] + calcCV(i,j,greyImg)){
+				ans.push(j);
+			} else if(j > 0  && cost[i][j] == energy[i][j] + cost[i-1][j-1] + calcCL(i,j,greyImg)){
+				ans.push(j-1);
+			} else{
+				ans.push(j+1);
+			}
+		}
+
+
+		return ans;
 	}
 
 	private BufferedImage increaseImageWidth() {
 		// TODO: Implement this method, remove the exception.
 		throw new UnimplementedMethodException("increaseImageWidth");
+	}
+
+	private long[][] calculatePixelsEnergy(int height , int width , BufferedImage greyscaleImgInProcess){
+
+		long[][] ans = new long[height][width];
+		int e1,e2,e3;
+
+		for(int i = 0; i < height; i++){
+			for(int j = 0; j < width; j++){
+				e1 = (j < width -1) ?
+						(Math.abs(greyscaleImgInProcess.getRGB(j,i) - greyscaleImgInProcess.getRGB(j+1,i))) :
+						(Math.abs(greyscaleImgInProcess.getRGB(j,i) - greyscaleImgInProcess.getRGB(j-1,i)));
+				e2 = (i < height -1) ?
+						(Math.abs(greyscaleImgInProcess.getRGB(j,i) - greyscaleImgInProcess.getRGB(j,i+1))) :
+						Math.abs(greyscaleImgInProcess.getRGB(j,i) - greyscaleImgInProcess.getRGB(j,i-1));
+				// TODO: min val not positive
+				e3 = (imageMask[i][j]) ? Integer.MIN_VALUE  : 0;
+				ans[i][j] = e1 + e2 + e3;
+			}
+		}
+
+		return ans;
+	}
+
+	private long[][] calculateCostMatrix(int height , int width , BufferedImage greyscaleImgInProcess , long[][] energyCosts){
+		long[][] ans = new long[height][width];
+
+		for(int i = 0; i < height; i++) {
+			for (int j = 0; j < width; j++) {
+				long e = energyCosts[i][j];
+				//first row
+				if (i == 0){
+					ans[i][j] = e;
+				} else {
+					//first col
+					if (j == 0) {
+						ans[i][j] = e + Math.min((ans[i-1][j] + calcCV(i,j,greyscaleImgInProcess)), (ans[i-1][j+1] + calcCR(i,j,greyscaleImgInProcess)));
+					}// last col
+					else if (j == greyscaleImgInProcess.getWidth()-1){
+						ans[i][j] = e + Math.min((ans[i-1][j] + calcCV(i,j,greyscaleImgInProcess)),(ans[i-1][j+1] + calcCR(i,j,greyscaleImgInProcess)));
+					} else {
+						ans[i][j] = e + Math.min((ans[i-1][j] + calcCV(i,j,greyscaleImgInProcess)), Math.min((ans[i-1][j+1] + calcCR(i,j,greyscaleImgInProcess)),(ans[i-1][j-1] + calcCL(i,j,greyscaleImgInProcess))));
+					}
+				}
+			}
+		}
+		return ans;
+	}
+
+	private long calcCV(int i, int j,BufferedImage greyscaleImage) {
+		return Math.abs(greyscaleImage.getRGB(j+1,i) - greyscaleImage.getRGB(j-1,i));
+	}
+
+	private long calcCR(int i, int j, BufferedImage greyscaleImage) {
+		return Math.abs(greyscaleImage.getRGB(j+1,i) - greyscaleImage.getRGB(j-1,i)) +
+					Math.abs(greyscaleImage.getRGB(j+1,i) - greyscaleImage.getRGB(j,i-1));
+
+	}
+
+	private long calcCL(int i, int j, BufferedImage greyscaleImage) {
+		return Math.abs(greyscaleImage.getRGB(j+1,i) - greyscaleImage.getRGB(j-1,i)) +
+					Math.abs(greyscaleImage.getRGB(j,i-1) - greyscaleImage.getRGB(j-1,i));
+
 	}
 
 	public BufferedImage showSeams(int seamColorRGB) {
