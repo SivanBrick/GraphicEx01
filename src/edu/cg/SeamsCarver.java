@@ -2,6 +2,8 @@ package edu.cg;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
 public class SeamsCarver extends ImageProcessor {
@@ -16,7 +18,7 @@ public class SeamsCarver extends ImageProcessor {
     private int numOfSeams;
     private ResizeOperation resizeOp;
     boolean[][] imageMask;
-    private int[][] seams;
+    private ArrayList<ArrayList<Integer>> seams;
     private boolean[][] isSeam;
     private boolean[][] seamCarvingMask;
     // TODO: Add some additional fields
@@ -43,7 +45,7 @@ public class SeamsCarver extends ImageProcessor {
 
         // TODO: You may initialize your additional fields and apply some preliminary
         // calculations.
-        this.seams = new int[numOfSeams][workingImage.getHeight()];
+        this.seams = new ArrayList<>();
         this.isSeam = new boolean[workingImage.getHeight()][workingImage.getWidth()];
         reduceImageWidth();
 
@@ -70,12 +72,15 @@ public class SeamsCarver extends ImageProcessor {
             //remove seam + create new image mask
             BufferedImage plainImage = newEmptyImage(newWidth, inHeight);
             boolean[][] newImageMask = new boolean[inHeight][newWidth];
+            ArrayList seamList = new ArrayList<Integer>();
 
             for (int rows = 0; rows < inHeight; rows++) {
                 int pixelToRemove = seamToRemove.pop();
                 //initialize the seams matrix
-                this.seams[i][rows] = pixelToRemove;
-                this.isSeam[rows][pixelToRemove] = true;
+                int offsetPixel = calcOffset(rows,pixelToRemove);
+                seamList.add(offsetPixel);
+                this.isSeam[rows][offsetPixel] = true;
+                System.out.format("seam number %3d - pixle %3d , %3d\n",i,rows,offsetPixel);
                 int col = 0;
                 while (col < pixelToRemove){
                     newImageMask[rows][col] = this.imageMask[rows][col];
@@ -89,12 +94,24 @@ public class SeamsCarver extends ImageProcessor {
                     col++;
                 }
             }
+            this.seams.add(seamList);
             this.seamCarvingMask = newImageMask;
             curWorkingImage = plainImage;
             greyWorkingImg = new ImageProcessor(logger, curWorkingImage, rgbWeights, newWidth, curWorkingImage.getHeight()).greyscale();
         }
 
         return curWorkingImage;
+    }
+
+    private int calcOffset(int rows, int pixelToRemove) {
+        int numOfTrue = 0;
+        for (int i = 0; i < seams.size() ; i++){
+            if (seams.get(i).get(rows) <= pixelToRemove){
+                numOfTrue++;
+                pixelToRemove += 1;
+            }
+        }
+        return pixelToRemove;
     }
 
     private Stack backTracking(long[][] cost, long[][] energy, int height, int width, BufferedImage greyImg) {
@@ -112,6 +129,7 @@ public class SeamsCarver extends ImageProcessor {
             }
         }
         ans.push(minValPositin);
+        System.out.format("minX - %3d",minVal);
 
         for (int i = height - 1; i > 0; i--) {
             int j = ans.peek();
@@ -131,6 +149,7 @@ public class SeamsCarver extends ImageProcessor {
         // TODO: Implement this method, remove the exception.
         throw new UnimplementedMethodException("increaseImageWidth");
     }
+
 
     private long[][] calculatePixelsEnergy(int height, int width, BufferedImage greyscaleImgInProcess) {
 
