@@ -3,7 +3,6 @@ package edu.cg;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Stack;
 
 public class SeamsCarver extends ImageProcessor {
@@ -69,6 +68,7 @@ public class SeamsCarver extends ImageProcessor {
             Stack<Integer> seamToRemove = backTracking(cost, energy, inHeight, inWidth - i, greyWorkingImg);
             int newWidth = inWidth - i - 1;
 
+
             //remove seam + create new image mask
             BufferedImage plainImage = newEmptyImage(newWidth, inHeight);
             boolean[][] newImageMask = new boolean[inHeight][newWidth];
@@ -77,20 +77,20 @@ public class SeamsCarver extends ImageProcessor {
             for (int rows = 0; rows < inHeight; rows++) {
                 int pixelToRemove = seamToRemove.pop();
                 //initialize the seams matrix
-                int offsetPixel = calcOffset(rows,pixelToRemove);
+                int offsetPixel = calcOffset(rows, pixelToRemove);
                 seamList.add(offsetPixel);
                 this.isSeam[rows][offsetPixel] = true;
-                System.out.format("seam number %3d - pixle %3d , %3d\n",i,rows,offsetPixel);
+                System.out.println(rows + "   " + offsetPixel + "   is" + this.isSeam[rows][offsetPixel]);
                 int col = 0;
-                while (col < pixelToRemove){
+                while (col < pixelToRemove) {
                     newImageMask[rows][col] = this.imageMask[rows][col];
-                    plainImage.setRGB(col, rows, curWorkingImage.getRGB(col,rows));
+                    plainImage.setRGB(col, rows, curWorkingImage.getRGB(col, rows));
                     col++;
                 }
                 col++;
-                while (col < inWidth - i){
-                    newImageMask[rows][col-1] = this.imageMask[rows][col];
-                    plainImage.setRGB(col - 1, rows, curWorkingImage.getRGB(col,rows));
+                while (col < inWidth - i) {
+                    newImageMask[rows][col - 1] = this.imageMask[rows][col];
+                    plainImage.setRGB(col - 1, rows, curWorkingImage.getRGB(col, rows));
                     col++;
                 }
             }
@@ -105,8 +105,8 @@ public class SeamsCarver extends ImageProcessor {
 
     private int calcOffset(int rows, int pixelToRemove) {
         int numOfTrue = 0;
-        for (int i = 0; i < seams.size() ; i++){
-            if (seams.get(i).get(rows) <= pixelToRemove){
+        for (int i = 0; i < seams.size(); i++) {
+            if (seams.get(i).get(rows) <= pixelToRemove) {
                 numOfTrue++;
                 pixelToRemove += 1;
             }
@@ -128,8 +128,9 @@ public class SeamsCarver extends ImageProcessor {
                 minValPositin = j;
             }
         }
+
         ans.push(minValPositin);
-        System.out.format("minX - %3d",minVal);
+        System.out.format("minX - %3d", minVal);
 
         for (int i = height - 1; i > 0; i--) {
             int j = ans.peek();
@@ -142,14 +143,35 @@ public class SeamsCarver extends ImageProcessor {
             }
         }
 
+
         return ans;
     }
 
     private BufferedImage increaseImageWidth() {
-        // TODO: Implement this method, remove the exception.
-        throw new UnimplementedMethodException("increaseImageWidth");
-    }
+        BufferedImage newImg = newEmptyImage(outWidth, outHeight);
+        int rowNew = 0, colNew = 0;
+        for (int rowOriginal = 0; rowOriginal < inHeight; rowOriginal++) {
+            for (int colOriginal = 0; colOriginal < inWidth; colOriginal++) {
+                int rbg = this.workingImage.getRGB(colOriginal, rowOriginal);
+                System.out.println("working Img fine");
+                newImg.setRGB(colNew, rowNew, rbg);
+                System.out.println("new Img fine");
+                System.out.println(rowOriginal + "   " + colOriginal + "   " + this.isSeam[rowOriginal][colOriginal]);
+                if (this.isSeam[rowOriginal][colOriginal]) {
+                    System.out.println(rowNew + "   " + colNew);
+                    System.out.println("---------------");
+                    colNew++;
+                    newImg.setRGB(colNew, rowNew, rbg);
+                }
+                colNew++;
+            }
 
+            rowNew++;
+        }
+
+
+        return newImg;
+    }
 
     private long[][] calculatePixelsEnergy(int height, int width, BufferedImage greyscaleImgInProcess) {
 
@@ -163,7 +185,7 @@ public class SeamsCarver extends ImageProcessor {
                         (Math.abs(curVal - new Color(greyscaleImgInProcess.getRGB(j + 1, i)).getRed())) :
                         (Math.abs(curVal - new Color(greyscaleImgInProcess.getRGB(j - 1, i)).getRed()));
                 e2 = (i < height - 1) ?
-                        (Math.abs(curVal- new Color(greyscaleImgInProcess.getRGB(j, i + 1)).getRed())) :
+                        (Math.abs(curVal - new Color(greyscaleImgInProcess.getRGB(j, i + 1)).getRed())) :
                         Math.abs(curVal - new Color(greyscaleImgInProcess.getRGB(j, i - 1)).getRed());
                 e3 = (imageMask[i][j]) ? Integer.MIN_VALUE : 0;
                 ans[i][j] = e1 + e2 + e3;
@@ -186,7 +208,7 @@ public class SeamsCarver extends ImageProcessor {
                     long top = ans[i - 1][j] + calcCU(i, j, greyscaleImgInProcess);
                     //first col
                     if (j == 0) {
-                        ans[i][j] = e + Math.min(top , (ans[i - 1][j + 1] + calcCR(i, j, greyscaleImgInProcess)));
+                        ans[i][j] = e + Math.min(top, (ans[i - 1][j + 1] + calcCR(i, j, greyscaleImgInProcess)));
                     }// last col
                     else if (j == greyscaleImgInProcess.getWidth() - 1) {
                         ans[i][j] = e + Math.min(top, (ans[i - 1][j - 1] + calcCL(i, j, greyscaleImgInProcess)));
@@ -210,23 +232,23 @@ public class SeamsCarver extends ImageProcessor {
     private long calcCR(int i, int j, BufferedImage greyscaleImage) {
         long a = (j > 0) ? Math.abs(new Color(greyscaleImage.getRGB(j + 1, i)).getRed() - new Color(greyscaleImage.getRGB(j - 1, i)).getRed()) : 0;
         long b = Math.abs(new Color(greyscaleImage.getRGB(j + 1, i)).getRed() - new Color(greyscaleImage.getRGB(j, i - 1)).getRed());
-        return a+b;
+        return a + b;
     }
 
     private long calcCL(int i, int j, BufferedImage greyscaleImage) {
         long a = (j < greyscaleImage.getWidth() - 1) ? Math.abs(new Color(greyscaleImage.getRGB(j + 1, i)).getRed() - new Color(greyscaleImage.getRGB(j - 1, i)).getRed()) : 0;
         long b = Math.abs(new Color(greyscaleImage.getRGB(j, i - 1)).getRed() - new Color(greyscaleImage.getRGB(j - 1, i)).getRed());
-        return a+b;
+        return a + b;
     }
 
     public BufferedImage showSeams(int seamColorRGB) {
         BufferedImage ans = this.duplicateWorkingImage();
 
-        if (numOfSeams > 0){
-            for(int i = 0; i < workingImage.getHeight(); i++){
-                for (int j = 0; j < workingImage.getWidth(); j++){
-                    if (isSeam[i][j]== true){
-                        ans.setRGB(j,i,seamColorRGB);
+        if (numOfSeams > 0) {
+            for (int i = 0; i < workingImage.getHeight(); i++) {
+                for (int j = 0; j < workingImage.getWidth(); j++) {
+                    if (isSeam[i][j] == true) {
+                        ans.setRGB(j, i, seamColorRGB);
                     }
                 }
             }
