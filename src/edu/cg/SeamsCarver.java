@@ -16,6 +16,9 @@ public class SeamsCarver extends ImageProcessor {
     private int numOfSeams;
     private ResizeOperation resizeOp;
     boolean[][] imageMask;
+    private int[][] seams;
+    private boolean[][] isSeam;
+    private boolean[][] seamCarvingMask;
     // TODO: Add some additional fields
 
     public SeamsCarver(Logger logger, BufferedImage workingImage, int outWidth, RGBWeights rgbWeights,
@@ -40,6 +43,9 @@ public class SeamsCarver extends ImageProcessor {
 
         // TODO: You may initialize your additional fields and apply some preliminary
         // calculations.
+        this.seams = new int[numOfSeams][workingImage.getHeight()];
+        this.isSeam = new boolean[workingImage.getHeight()][workingImage.getWidth()];
+        reduceImageWidth();
 
         this.logger.log("preliminary calculations were ended.");
     }
@@ -49,9 +55,10 @@ public class SeamsCarver extends ImageProcessor {
     }
 
     private BufferedImage reduceImageWidth() {
-        //TODO: copy the original or destroy???
-        BufferedImage greyWorkingImg = new ImageProcessor(logger, workingImage, rgbWeights, inWidth, workingImage.getHeight()).greyscale();
-        BufferedImage curWorkingImage = this.workingImage;
+
+        BufferedImage curWorkingImage = this.duplicateWorkingImage();
+        BufferedImage greyWorkingImg = new ImageProcessor(logger, curWorkingImage, rgbWeights, inWidth, curWorkingImage.getHeight()).greyscale();
+
         for (int i = 0; i < numOfSeams; i++) {
 
             long[][] energy = calculatePixelsEnergy(inHeight, inWidth - i, greyWorkingImg);
@@ -60,13 +67,15 @@ public class SeamsCarver extends ImageProcessor {
             Stack<Integer> seamToRemove = backTracking(cost, energy, inHeight, inWidth - i, greyWorkingImg);
             int newWidth = inWidth - i - 1;
 
-
             //remove seam + create new image mask
             BufferedImage plainImage = newEmptyImage(newWidth, inHeight);
             boolean[][] newImageMask = new boolean[inHeight][newWidth];
 
             for (int rows = 0; rows < inHeight; rows++) {
                 int pixelToRemove = seamToRemove.pop();
+                //initialize the seams matrix
+                this.seams[i][rows] = pixelToRemove;
+                this.isSeam[rows][pixelToRemove] = true;
                 int col = 0;
                 while (col < pixelToRemove){
                     newImageMask[rows][col] = this.imageMask[rows][col];
@@ -80,15 +89,13 @@ public class SeamsCarver extends ImageProcessor {
                     col++;
                 }
             }
-            this.imageMask = newImageMask;
+            this.seamCarvingMask = newImageMask;
             curWorkingImage = plainImage;
             greyWorkingImg = new ImageProcessor(logger, curWorkingImage, rgbWeights, newWidth, curWorkingImage.getHeight()).greyscale();
         }
 
         return curWorkingImage;
     }
-
-
 
     private Stack backTracking(long[][] cost, long[][] energy, int height, int width, BufferedImage greyImg) {
 
@@ -104,7 +111,6 @@ public class SeamsCarver extends ImageProcessor {
                 minValPositin = j;
             }
         }
-
         ans.push(minValPositin);
 
         for (int i = height - 1; i > 0; i--) {
@@ -117,7 +123,6 @@ public class SeamsCarver extends ImageProcessor {
                 ans.push(j + 1);
             }
         }
-
 
         return ans;
     }
@@ -134,13 +139,13 @@ public class SeamsCarver extends ImageProcessor {
 
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
+                int curVal = new Color(greyscaleImgInProcess.getRGB(j, i)).getRed();
                 e1 = (j < width - 1) ?
-                        (Math.abs(new Color(greyscaleImgInProcess.getRGB(j, i)).getRed() - new Color(greyscaleImgInProcess.getRGB(j + 1, i)).getRed())) :
-                        (Math.abs(new Color(greyscaleImgInProcess.getRGB(j, i)).getRed() - new Color(greyscaleImgInProcess.getRGB(j - 1, i)).getRed()));
+                        (Math.abs(curVal - new Color(greyscaleImgInProcess.getRGB(j + 1, i)).getRed())) :
+                        (Math.abs(curVal - new Color(greyscaleImgInProcess.getRGB(j - 1, i)).getRed()));
                 e2 = (i < height - 1) ?
-                        (Math.abs(new Color(greyscaleImgInProcess.getRGB(j, i)).getRed() - new Color(greyscaleImgInProcess.getRGB(j, i + 1)).getRed())) :
-                        Math.abs(new Color(greyscaleImgInProcess.getRGB(j, i)).getRed() - new Color(greyscaleImgInProcess.getRGB(j, i - 1)).getRed());
-                // TODO: min val not positive
+                        (Math.abs(curVal- new Color(greyscaleImgInProcess.getRGB(j, i + 1)).getRed())) :
+                        Math.abs(curVal - new Color(greyscaleImgInProcess.getRGB(j, i - 1)).getRed());
                 e3 = (imageMask[i][j]) ? Integer.MIN_VALUE : 0;
                 ans[i][j] = e1 + e2 + e3;
             }
@@ -159,14 +164,15 @@ public class SeamsCarver extends ImageProcessor {
                 if (i == 0) {
                     ans[i][j] = e;
                 } else {
+                    long top = ans[i - 1][j] + calcCU(i, j, greyscaleImgInProcess);
                     //first col
                     if (j == 0) {
-                        ans[i][j] = e + Math.min((ans[i - 1][j] + calcCU(i, j, greyscaleImgInProcess)), (ans[i - 1][j + 1] + calcCR(i, j, greyscaleImgInProcess)));
+                        ans[i][j] = e + Math.min(top , (ans[i - 1][j + 1] + calcCR(i, j, greyscaleImgInProcess)));
                     }// last col
                     else if (j == greyscaleImgInProcess.getWidth() - 1) {
-                        ans[i][j] = e + Math.min((ans[i - 1][j] + calcCU(i, j, greyscaleImgInProcess)), (ans[i - 1][j - 1] + calcCL(i, j, greyscaleImgInProcess)));
+                        ans[i][j] = e + Math.min(top, (ans[i - 1][j - 1] + calcCL(i, j, greyscaleImgInProcess)));
                     } else {
-                        ans[i][j] = e + Math.min((ans[i - 1][j] + calcCU(i, j, greyscaleImgInProcess)), Math.min((ans[i - 1][j + 1] + calcCR(i, j, greyscaleImgInProcess)), (ans[i - 1][j - 1] + calcCL(i, j, greyscaleImgInProcess))));
+                        ans[i][j] = e + Math.min(top, Math.min((ans[i - 1][j + 1] + calcCR(i, j, greyscaleImgInProcess)), (ans[i - 1][j - 1] + calcCL(i, j, greyscaleImgInProcess))));
                     }
                 }
             }
@@ -195,8 +201,21 @@ public class SeamsCarver extends ImageProcessor {
     }
 
     public BufferedImage showSeams(int seamColorRGB) {
-        // TODO: Implement this method (bonus), remove the exception.
-        throw new UnimplementedMethodException("showSeams");
+        BufferedImage ans = this.duplicateWorkingImage();
+
+        if (numOfSeams > 0){
+            for(int i = 0; i < workingImage.getHeight(); i++){
+                for (int j = 0; j < workingImage.getWidth(); j++){
+                    if (isSeam[i][j]== true){
+                        ans.setRGB(j,i,seamColorRGB);
+                    }
+                }
+            }
+        }
+
+        logger.log("Changing greyscale done!");
+
+        return ans;
     }
 
     public boolean[][] getMaskAfterSeamCarving() {
