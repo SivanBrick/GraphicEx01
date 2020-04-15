@@ -80,7 +80,7 @@ public class SeamsCarver extends ImageProcessor {
                 int offsetPixel = calcOffset(rows, pixelToRemove);
                 seamList.add(offsetPixel);
                 this.isSeam[rows][offsetPixel] = true;
-                System.out.println(rows + "   " + offsetPixel + "   is" + this.isSeam[rows][offsetPixel]);
+                System.out.println(rows + "   "  + "   is" + this.isSeam[rows][offsetPixel]);
                 int col = 0;
                 while (col < pixelToRemove) {
                     newImageMask[rows][col] = this.imageMask[rows][col];
@@ -149,24 +149,24 @@ public class SeamsCarver extends ImageProcessor {
 
     private BufferedImage increaseImageWidth() {
         BufferedImage newImg = newEmptyImage(outWidth, outHeight);
-        int rowNew = 0, colNew = 0;
-        for (int rowOriginal = 0; rowOriginal < inHeight; rowOriginal++) {
+        System.out.println(outHeight + "   " + outWidth);
+        int colNew = 0;
+        for (int row = 0; row < inHeight; row++) {
             for (int colOriginal = 0; colOriginal < inWidth; colOriginal++) {
-                int rbg = this.workingImage.getRGB(colOriginal, rowOriginal);
-                System.out.println("working Img fine");
-                newImg.setRGB(colNew, rowNew, rbg);
-                System.out.println("new Img fine");
-                System.out.println(rowOriginal + "   " + colOriginal + "   " + this.isSeam[rowOriginal][colOriginal]);
-                if (this.isSeam[rowOriginal][colOriginal]) {
-                    System.out.println(rowNew + "   " + colNew);
+                int rbg = this.workingImage.getRGB(colOriginal, row);
+                System.out.println("working Img fine   col is " + colOriginal + " row is" + row );
+                newImg.setRGB(colNew, row, rbg);
+                System.out.println("new Img fine   Col is " + colNew + " Row is" + row);
+                System.out.println(row + "   " + colOriginal + "   " + this.isSeam[row][colOriginal]);
+                if (this.isSeam[row][colOriginal]) {
                     System.out.println("---------------");
                     colNew++;
-                    newImg.setRGB(colNew, rowNew, rbg);
+                    newImg.setRGB(colNew, row, rbg);
+                    System.out.println(" updated in " + colNew + "   " + row);
                 }
                 colNew++;
             }
-
-            rowNew++;
+            colNew = 0;
         }
 
 
