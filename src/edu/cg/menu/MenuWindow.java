@@ -254,13 +254,8 @@ public class MenuWindow extends JFrame implements Logger {
 		curMask = duplicateMask(sc.getMaskAfterSeamCarving());
 		sc = new SeamsCarver(this,curImg,originalWidth,weights,curMask);
 		curImg = sc.resize();
-		curMask = duplicateMask(sc.getMaskAfterSeamCarving());
-		present(curImg,"pre");
 
-		// TODO: After completing the implementation - make sure you present the result.
-		// Just uncomment the following line, and replace 'result' with your
-		// result variable.
-		// present(result, "Image After Object Removal");
+		present(curImg,"Image After Object Removal");
 	}
 
 	private int numOfTrueInRow(boolean[][] srcMask){
