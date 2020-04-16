@@ -244,13 +244,41 @@ public class MenuWindow extends JFrame implements Logger {
 
 	public void removeObjectFromImage(boolean[][] srcMask) {
 
-		// TODO: Implement this method, remove the exception.
-		throw new UnimplementedMethodException("removeObjectFromImage");
+		boolean[][] curMask = duplicateMask(srcMask);
+		int originalWidth = this.workingImage.getWidth();
+		int numOfSeams = Math.min((originalWidth/3)-1,numOfTrueInRow(curMask));
+		BufferedImage curImg = this.duplicateImage();
+		RGBWeights weights = colorMixer.getRGBWeights();
+		SeamsCarver sc = new SeamsCarver(this, curImg, originalWidth - numOfSeams, weights,curMask);
+		curImg = sc.resize();
+		curMask = duplicateMask(sc.getMaskAfterSeamCarving());
+		sc = new SeamsCarver(this,curImg,originalWidth,weights,curMask);
+		curImg = sc.resize();
+		curMask = duplicateMask(sc.getMaskAfterSeamCarving());
+		present(curImg,"pre");
 
 		// TODO: After completing the implementation - make sure you present the result.
 		// Just uncomment the following line, and replace 'result' with your
 		// result variable.
 		// present(result, "Image After Object Removal");
+	}
+
+	private int numOfTrueInRow(boolean[][] srcMask){
+		int maxNumOfTrue = 0;
+		int counter = 0;
+		for(int i = 0; i < this.workingImage.getHeight(); i++){
+			for(int j = 0; j < this.workingImage.getWidth(); j++){
+				if (srcMask[i][j]){
+					counter++;
+				}
+			}
+			if (counter > maxNumOfTrue){
+				maxNumOfTrue = counter;
+			}
+			counter = 0;
+		}
+
+		return maxNumOfTrue;
 	}
 
 	public void maskImage() {
