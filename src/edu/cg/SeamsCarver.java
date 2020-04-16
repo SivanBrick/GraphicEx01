@@ -19,6 +19,7 @@ public class SeamsCarver extends ImageProcessor {
     private int numOfSeams;
     private ResizeOperation resizeOp;
     boolean[][] imageMask;
+
     int[][] trueIndexes;
     private boolean[][] isSeam;
     private boolean[][] seamCarvingMask;
@@ -68,6 +69,7 @@ public class SeamsCarver extends ImageProcessor {
 
         BufferedImage curWorkingImage = this.duplicateWorkingImage();
         BufferedImage greyWorkingImg = new ImageProcessor(logger, curWorkingImage, rgbWeights, inWidth, curWorkingImage.getHeight()).greyscale();
+        this.trueindexes = initializeTrueIndexes();
 
         for (int i = 0; i < numOfSeams; i++) {
 
@@ -77,14 +79,17 @@ public class SeamsCarver extends ImageProcessor {
             Stack<Integer> seamToRemove = backTracking(cost, energy, inHeight, inWidth - i, greyWorkingImg);
             int newWidth = inWidth - i - 1;
 
+
             //remove seam + create new image mask
             BufferedImage plainImage = newEmptyImage(newWidth, inHeight);
             boolean[][] newImageMask = new boolean[inHeight][newWidth];
+
             int[][] newTrueIndexes = new int[inHeight][newWidth];
 
             for (int rows = 0; rows < inHeight; rows++) {
                 int relatedPixel = seamToRemove.pop();
                 //initialize the seams matrix
+
                 int trueValPixel = this.trueIndexes[rows][relatedPixel];
                 this.isSeam[rows][trueValPixel] = true;
 
@@ -93,16 +98,20 @@ public class SeamsCarver extends ImageProcessor {
                     newImageMask[rows][col] = this.seamCarvingMask[rows][col];
                     plainImage.setRGB(col, rows, curWorkingImage.getRGB(col, rows));
                     newTrueIndexes[rows][col] = this.trueIndexes[rows][col];
+
                     col++;
                 }
                 col++;
                 while (col < inWidth - i) {
+
                     newImageMask[rows][col - 1] = this.seamCarvingMask[rows][col];
                     newTrueIndexes[rows][col - 1] = trueIndexes[rows][col];
+
                     plainImage.setRGB(col - 1, rows, curWorkingImage.getRGB(col, rows));
                     col++;
                 }
             }
+
             this.seamCarvingMask = newImageMask;
             this.trueIndexes = newTrueIndexes;
             curWorkingImage = plainImage;
@@ -111,6 +120,17 @@ public class SeamsCarver extends ImageProcessor {
 
         return curWorkingImage;
     }
+
+    private int[][] initializeTrueIndexes() {
+        int[][] ans = new int[inHeight][inWidth];
+        for(int i =0; i < inHeight; i++){
+            for(int j = 0; j < inWidth; j++){
+                ans[i][j] = j;
+            }
+        }
+        return ans;
+    }
+
 
     private Stack backTracking(long[][] cost, long[][] energy, int height, int width, BufferedImage greyImg) {
 
@@ -174,6 +194,7 @@ public class SeamsCarver extends ImageProcessor {
             }*/
         }
 
+
         return ans;
     }
 
@@ -201,6 +222,8 @@ public class SeamsCarver extends ImageProcessor {
         return ans;
     }
 
+        return newImg;
+    }
 
     private long[][] calculatePixelsEnergy(int height, int width, BufferedImage greyscaleImgInProcess) {
 
